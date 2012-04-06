@@ -1,0 +1,272 @@
+===================
+Configuration Store
+===================
+
+The configuration store allows you to store an object's data in a
+configuration file. Let's create a simple component:
+
+  >>> import zope.interface
+  >>> import zope.schema
+
+  >>> class IPerson(zope.interface.Interface):
+  ...     firstName = zope.schema.TextLine(title=u'First Name')
+  ...     lastName = zope.schema.TextLine(title=u'Last Name')
+  ...     nickname = zope.schema.TextLine(title=u'Nickname')
+
+  >>> class Person(object):
+  ...     zope.interface.implements(IPerson)
+  ...     def __init__(self, fn, ln):
+  ...         self.firstName = fn
+  ...         self.lastName = ln
+  ...         self.nickname = None
+  >>> stephan = Person(u'Stephan', u'Richter')
+
+We always have to create a configuration store specific to an object:
+
+  >>> from cipher.configstore import configstore
+  >>> PersonStore = configstore.createConfigurationStore(IPerson, 'generic')
+  >>> PersonStore
+  <class 'cipher.configstore.configstore.PersonStore'>
+  >>> store = PersonStore(stephan)
+
+We can now dump the configuration to a file:
+
+  >>> config = store.dump()
+  >>> config
+  <ConfigParser.RawConfigParser instance at ...>
+
+  >>> import tempfile
+  >>> conf_fn = tempfile.mktemp('.ini', prefix='cipher-configstore-')
+  >>> config.write(open(conf_fn, 'w'))
+  >>> print open(conf_fn, 'r').read()
+  [generic]
+  firstName = Stephan
+  lastName = Richter
+  nickname =
+
+We can now load the config again, overwriting any existing data.
+
+  >>> stephan2 = Person(u'', u'')
+  >>> store = PersonStore(stephan2)
+
+  >>> import ConfigParser
+  >>> config = ConfigParser.RawConfigParser()
+  >>> config.readfp(open(conf_fn, 'r'))
+
+  >>> store.load(config)
+  >>> stephan2.firstName
+  u'Stephan'
+  >>> stephan2.lastName
+  u'Richter'
+  >>> stephan2.nickname
+  u''
+
+Note that after the loading process an ``ObjectModifiedEvent`` event is
+created. Let's write a simple subscriber to the event and see what we get:
+
+  >>> from cipher.configstore import interfaces
+  >>> def handleModified(event):
+  ...     assert interfaces.IObjectConfigurationLoadedEvent.providedBy(event)
+  ...     print 'Object modified: %r' %event.object
+  ...     print '\n'.join([
+  ...         a.interface.getName()+': ' + ', '.join(a.attributes)
+  ...         for a in event.descriptions])
+  >>> import zope.event
+  >>> zope.event.subscribers.append(handleModified)
+
+  >>> stephan2.firstName = u'Anton'
+  >>> store.load(config)
+  Object modified: <Person object at ...>
+  IPerson: firstName
+
+  >>> zope.event.subscribers.remove(handleModified)
+
+
+Sub-Component Storage
+---------------------
+
+To allow for an extensible storage meachnism, one can register additional
+stores for a given object. Let's say we would like to store an address:
+
+  >>> class IAddress(zope.interface.Interface):
+  ...     zip = zope.schema.TextLine(title=u'ZIP Code')
+
+  >>> class Address(object):
+  ...     zope.interface.implements(IAddress)
+  ...     def __init__(self, zip):
+  ...         self.zip = zip
+  ...     def __repr__(self):
+  ...         return '<%s %s>' %(self.__class__.__name__, self.zip)
+  >>> home = Address(u'01754')
+
+For the default store to work, the address must be available as an adapter to
+the person:
+
+  >>> zope.component.provideAdapter(lambda p: home, (IPerson,), IAddress)
+  >>> IAddress(stephan)
+  <Address 01754>
+
+We can now create an register a store for the address:
+
+  >>> AddressStore = configstore.createConfigurationStore(IAddress, 'address')
+  >>> zope.component.provideSubscriptionAdapter(AddressStore, (IPerson,))
+
+Let's now regenerate the configuration for the person:
+
+  >>> config = store.dump()
+  >>> config.write(open(conf_fn, 'w'))
+  >>> print open(conf_fn, 'r').read()
+  [generic]
+  firstName = Stephan
+  lastName = Richter
+  nickname =
+  <BLANKLINE>
+  [address]
+  zip = 01754
+
+Let's now load the configuration again:
+
+  >>> home.zip = u'10000'
+
+  >>> config = ConfigParser.RawConfigParser()
+  >>> config.readfp(open(conf_fn, 'r'))
+  >>> store.load(config)
+
+  >>> home.zip
+  u'01754'
+
+Custom Value Serialization
+--------------------------
+
+In order to provide custom value serialization, one has to sub-class the
+`ConfigurationStore` class. Here is an example of capitalizing the last name
+of the person:
+
+  >>> import zope.component
+  >>> class PersonStore(configstore.ConfigurationStore):
+  ...     zope.component.adapts(IPerson)
+  ...     def load_lastName(self, value):
+  ...         return unicode(value.title())
+  ...     def dump_lastName(self, value):
+  ...         return value.encode('UTF-8').upper()
+  >>> store = PersonStore(stephan)
+
+Let's now serialize the configuration again:
+
+  >>> config = store.dump()
+  >>> config.write(open(conf_fn, 'w'))
+  >>> print open(conf_fn, 'r').read()
+  [IPerson]
+  firstName = Stephan
+  lastName = RICHTER
+  nickname =
+  <BLANKLINE>
+  [address]
+  zip = 01754
+
+Also note that since I did not specify a section name, the name of the schema
+is picked up. Let's now load the config and make sure it is stored correctly:
+
+  >>> config = ConfigParser.RawConfigParser()
+  >>> config.readfp(open(conf_fn, 'r'))
+  >>> store.load(config)
+  >>> stephan.lastName
+  u'Richter'
+
+Collection Stores
+-----------------
+
+Collections of arbitrary objects are not as easy to represent in a flat
+ini-style format. The common solution is to use a section prefix and create a
+section for each item in the collection with a unique section name. The
+``configstore`` module provides a helper class to implement collection stores.
+
+Let's say a person has a collection of phone numbers:
+
+  >>> class IPhoneNumber(zope.interface.Interface):
+  ...     name = zope.schema.TextLine(title=u'Name')
+  ...     number = zope.schema.TextLine(title=u'ZIP Code')
+
+  >>> class PhoneNumber(object):
+  ...     zope.interface.implements(IPhoneNumber)
+  ...     def __init__(self, name=None, number=None):
+  ...         self.name = name
+  ...         self.number = number
+  ...     def __repr__(self):
+  ...         return '<%s %s>' %(self.__class__.__name__, self.name)
+
+  >>> class IPhoneNumbers(zope.schema.interfaces.IContainer):
+  ...     pass
+
+  >>> class PhoneNumbers(dict):
+  ...     zope.interface.implements(IPhoneNumbers)
+  ...     def __repr__(self):
+  ...         return '<%s %i>' %(self.__class__.__name__, len(self))
+
+  >>> numbers = PhoneNumbers()
+  >>> numbers['home'] = PhoneNumber(u'home', u'555-111-2222')
+  >>> numbers['work'] = PhoneNumber(u'work', u'555-333-4444')
+
+  >>> zope.component.provideAdapter(
+  ...     lambda p: numbers, (IPerson,), IPhoneNumbers)
+  >>> IPhoneNumbers(stephan)
+  <PhoneNumbers 2>
+
+Let's now create a config store for the individual phone number. Note that it
+is *not* a subscription adapter in this case.
+
+  >>> PhoneNumberStore = configstore.createConfigurationStore(IPhoneNumber)
+  >>> zope.component.provideAdapter(PhoneNumberStore, (IPhoneNumber,))
+
+For the collection of phone numbers, we simply use the collection config store
+base class:
+
+  >>> class PhoneNumbersStore(configstore.CollectionConfigurationStore):
+  ...     schema = IPhoneNumbers
+  ...     section_prefix = 'number:'
+  ...     item_factory = PhoneNumber
+  >>> zope.component.provideSubscriptionAdapter(
+  ...     PhoneNumbersStore, (IPerson,))
+
+Let's now dump the configuration:
+
+  >>> config = store.dump()
+  >>> config.write(open(conf_fn, 'w'))
+  >>> print open(conf_fn, 'r').read()
+  [IPerson]
+  firstName = Stephan
+  lastName = RICHTER
+  nickname =
+  <BLANKLINE>
+  [address]
+  zip = 01754
+  <BLANKLINE>
+  [number:home]
+  name = home
+  number = 555-111-2222
+  <BLANKLINE>
+  [number:work]
+  name = work
+  number = 555-333-4444
+
+Let's now load the config and make sure it is stored correctly:
+
+  >>> config = ConfigParser.RawConfigParser()
+  >>> config.readfp(open(conf_fn, 'r'))
+  >>> store.load(config)
+  >>> numbers
+  <PhoneNumbers 2>
+  >>> numbers['home'].name
+  u'home'
+  >>> numbers['home'].number
+  u'555-111-2222'
+  >>> numbers['work'].name
+  u'work'
+  >>> numbers['work'].number
+  u'555-333-4444'
+
+Cleanup:
+
+  >>> import os
+  >>> os.unlink(conf_fn)
+

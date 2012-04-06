@@ -1,0 +1,25 @@
+=======
+CHANGES
+=======
+
+1.2.0 (unreleased)
+------------------
+
+- ...
+
+1.1.1 (2012-02-27)
+------------------
+
+- Make sure that setting the parent explicitly on items created in the
+  collection config store is optionally and overwritable.
+
+
+1.1.0 (2012-01-29)
+------------------
+
+- Feature Added dump/load support for ``datetime.timedelta`` objects.
+
+1.0.0
+-----
+
+- Initial release.
