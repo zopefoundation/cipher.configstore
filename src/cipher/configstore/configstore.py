@@ -87,6 +87,9 @@ class ConfigurationStore(object):
     def load_type_Tuple(self, unicode, field):
         return tuple(self.load_type_List(unicode, field))
 
+    def load_type_Set(self, unicode, field):
+        return set(self.load_type_List(unicode, field))
+
     def _load_field(self, name, field, config, context=None):
         if context is None:
             context = self.context
@@ -168,6 +171,7 @@ class ConfigurationStore(object):
         return self.listValueSeparator.join(value) if value else ''
 
     dump_type_List = dump_type_Tuple
+    dump_type_Set = dump_type_Tuple
 
     def _dump_field(self, name, field, config, value=novalue):
         __traceback_info__ = (name, field)
