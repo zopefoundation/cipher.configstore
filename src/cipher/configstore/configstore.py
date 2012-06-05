@@ -242,9 +242,13 @@ class CollectionConfigurationStore(ConfigurationStore):
     def _applyPostAddConfig(self, item, config, section):
         pass
 
+    def clearContext(self):
+        ctx = removeSecurityProxy(self.context)
+        for key in list(ctx):
+            del ctx[key]
+
     def load(self, config):
-        # Remove all existing items
-        removeSecurityProxy(self.context).__init__()
+        self.clearContext()
         # Load one item at a time.
         for section in config.sections():
             if not section.startswith(self.section_prefix):

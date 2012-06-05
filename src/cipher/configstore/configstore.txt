@@ -200,10 +200,14 @@ Let's say a person has a collection of phone numbers:
 
   >>> class PhoneNumbers(dict):
   ...     zope.interface.implements(IPhoneNumbers)
+  ...     def __init__(self):
+  ...         print "Initializing PhoneNumbers"
+  ...         super(PhoneNumbers, self).__init__()
   ...     def __repr__(self):
   ...         return '<%s %i>' %(self.__class__.__name__, len(self))
 
   >>> numbers = PhoneNumbers()
+  Initializing PhoneNumbers
   >>> numbers['home'] = PhoneNumber(u'home', u'555-111-2222')
   >>> numbers['work'] = PhoneNumber(u'work', u'555-333-4444')
 
