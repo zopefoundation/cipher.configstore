@@ -2,8 +2,8 @@
 CHANGES
 =======
 
-1.2.2 (unrelease)
------------------
+1.2.2 (2012-08-30)
+------------------
 
 - Provide ``container`` and ``root`` attributes on IConfigurationStore
   they come handy in various load and dump situation instead of __parent__
