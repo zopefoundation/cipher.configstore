@@ -34,10 +34,12 @@ log = logging.getLogger(__name__)
 
 novalue = object()
 
+
 def stringify(s):
     if s is None:
         return ''
     return unicode(s)
+
 
 def parse_time(s):
     return dateutil.parser.parse(s).time()
@@ -67,8 +69,8 @@ class ConfigurationStore(object):
     def load_type_Timedelta(self, unicode, field):
         if not unicode:
             return
-        h, m , s = [int(p) for p in unicode.strip().split(':')]
-        return datetime.timedelta(seconds=h*3600+m*60+s)
+        h, m, s = [int(p) for p in unicode.strip().split(':')]
+        return datetime.timedelta(seconds=h * 3600 + m * 60 + s)
 
     def load_type_Text(self, value, field):
         return value.replace('\n<BLANKLINE>\n', '\n\n')
@@ -97,10 +99,10 @@ class ConfigurationStore(object):
             # skip read-only fields, especially __name__
             return False
         field_type = field.__class__
-        if hasattr(self, 'load_'+name):
-            converter = getattr(self, 'load_'+name, None)
-        elif hasattr(self, 'load_type_'+field_type.__name__):
-            converter = getattr(self, 'load_type_'+field_type.__name__, None)
+        if hasattr(self, 'load_' + name):
+            converter = getattr(self, 'load_' + name, None)
+        elif hasattr(self, 'load_type_' + field_type.__name__):
+            converter = getattr(self, 'load_type_' + field_type.__name__, None)
             converter = lambda v, converter=converter: converter(v, field)
         elif zope.schema.interfaces.IFromUnicode.providedBy(field):
             converter = field.bind(context).fromUnicode
@@ -179,10 +181,10 @@ class ConfigurationStore(object):
             # skip read-only fields, we won't be loading them
             return
         field_type = field.__class__
-        if hasattr(self, 'dump_'+name):
-            converter = getattr(self, 'dump_'+name)
-        elif hasattr(self, 'dump_type_'+field_type.__name__):
-            converter = getattr(self, 'dump_type_'+field_type.__name__)
+        if hasattr(self, 'dump_' + name):
+            converter = getattr(self, 'dump_' + name)
+        elif hasattr(self, 'dump_type_' + field_type.__name__):
+            converter = getattr(self, 'dump_type_' + field_type.__name__)
             converter = lambda v, converter=converter: converter(v, field)
         elif zope.schema.interfaces.IFromUnicode.providedBy(field):
             converter = stringify
@@ -205,7 +207,7 @@ class ConfigurationStore(object):
     def dump(self, config=None):
         if config is None:
             config = ConfigParser.RawConfigParser(dict_type=odict.odict)
-            config.optionxform = str # don't lowercase
+            config.optionxform = str  # don't lowercase
         # Write object's configuration.
         self._dump(config)
         # Write any sub-object configuration.
@@ -215,6 +217,7 @@ class ConfigurationStore(object):
             __traceback_info__ = repr(store)
             store.dump(config)
         return config
+
 
 class CollectionConfigurationStore(ConfigurationStore):
     section_prefix = None
@@ -263,7 +266,7 @@ class CollectionConfigurationStore(ConfigurationStore):
             # Note sends a ContainerModifiedEvent which would causes a config
             # dump, overwriting the original file with partial information.
             # That's why we have this _v_load_in_progress "lock".
-            self._add(name,  item)
+            self._add(name, item)
             self._applyPostAddConfig(item, config, section)
         zope.event.notify(
             interfaces.ObjectConfigurationLoadedEvent(self.context))
@@ -271,7 +274,7 @@ class CollectionConfigurationStore(ConfigurationStore):
     def dump(self, config=None):
         if config is None:
             config = ConfigParser.RawConfigParser(dict_type=odict.odict)
-            config.optionxform = str # don't lowercase
+            config.optionxform = str  # don't lowercase
         for name, item in self._getItems():
             if getattr(item, '__parent__', self) is None:
                 # Sad story: you remove an item from a BTreeContainer
@@ -288,9 +291,10 @@ class CollectionConfigurationStore(ConfigurationStore):
             item_store.dump(config)
         return config
 
+
 def createConfigurationStore(schema, section=None):
     return type(
-        schema.getName()[1:]+'Store', (ConfigurationStore,),
+        schema.getName()[1:] + 'Store', (ConfigurationStore,),
         {'section': section, 'schema': schema})
 
 
@@ -303,7 +307,7 @@ class ExternalConfigurationStore(ConfigurationStore):
         return None
 
     def get_filename(self):
-        return self.context.__name__+'.ini'
+        return self.context.__name__ + '.ini'
 
     def _load_from_external(self, config):
         # Load general attributes.
@@ -328,7 +332,7 @@ class ExternalConfigurationStore(ConfigurationStore):
             self.get_config_dir(), config.get(self.section, 'config-path'))
         __traceback_info__ = fn
         ext_config = ConfigParser.RawConfigParser(dict_type=odict.odict)
-        ext_config.optionxform = str # don't lowercase
+        ext_config.optionxform = str  # don't lowercase
         ext_config.read(fn)
         self._load_from_external(ext_config)
 
@@ -339,7 +343,7 @@ class ExternalConfigurationStore(ConfigurationStore):
             self.get_config_dir(), cs.__name__, self.get_filename())
         # Create a new configuration for the table-specific API.
         config = ConfigParser.RawConfigParser(dict_type=odict.odict)
-        config.optionxform = str # don't lowercase
+        config.optionxform = str  # don't lowercase
         # Write object's configuration.
         orig_section = self.section
         self.section = 'general'
@@ -360,7 +364,7 @@ class ExternalConfigurationStore(ConfigurationStore):
     def dump(self, config=None):
         if config is None:
             config = ConfigParser.RawConfigParser(dict_type=odict.odict)
-            config.optionxform = str # don't lowercase
+            config.optionxform = str  # don't lowercase
         # Write any sub-object configuration into a separate configuration file.
         fn = self._dump_to_external()
         # Just a small stub in the main config.

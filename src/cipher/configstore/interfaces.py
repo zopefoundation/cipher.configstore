@@ -32,8 +32,8 @@ class IConfigurationStore(zope.interface.Interface):
     schema = zope.interface.Attribute('The schema to be serialized.')
 
     section = zope.schema.ASCIILine(
-        title = u'Section Name',
-        description = u'The name of the section in the configuration.',
+        title=u'Section Name',
+        description=u'The name of the section in the configuration.',
         required=True)
 
     def load(config):
@@ -44,6 +44,7 @@ class IConfigurationStore(zope.interface.Interface):
 
         If the `config` paramter is `None`, a configuration object is created.
         """
+
 
 class ICipherObject(zope.interface.Interface):
     "mark all Cipher objects"
