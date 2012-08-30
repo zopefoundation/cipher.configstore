@@ -34,7 +34,7 @@ setup(
         read('CHANGES.txt')
         ),
     license='ZPL 2.1',
-    classifiers = [
+    classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
@@ -43,16 +43,16 @@ setup(
         'Operating System :: OS Independent',
         'Topic :: Internet :: WWW/HTTP',
         'Framework :: Zope3'],
-    packages = find_packages('src'),
-    package_dir = {'': 'src'},
-    extras_require = dict(
-        test = ['zope.testing',
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
+    extras_require=dict(
+        test=['zope.testing',
                 'z3c.coverage',
                 'coverage',
                 'python-subunit',
                 'junitxml'],
     ),
-    install_requires = [
+    install_requires=[
         'odict',
         'python-dateutil',
         'setuptools',
@@ -63,6 +63,6 @@ setup(
         'zope.schema',
         'zope.security',
     ],
-    include_package_data = True,
-    zip_safe = False
+    include_package_data=True,
+    zip_safe=False
     )
