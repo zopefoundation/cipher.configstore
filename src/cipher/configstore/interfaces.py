@@ -36,6 +36,15 @@ class IConfigurationStore(zope.interface.Interface):
         description=u'The name of the section in the configuration.',
         required=True)
 
+    container = zope.interface.Attribute(
+        'The container in case the item under load will be added to one. '
+        'Happens if CollectionConfigurationStore loads the object.')
+
+    root = zope.interface.Attribute(
+        "The root object being loaded by the ConfigurationStore hierarchy. "
+        "You'll need to set this attribute on the root ConfigurationStore "
+        "then it will get passed down the tree")
+
     def load(config):
         """Load configuration and apply it to the object."""
 

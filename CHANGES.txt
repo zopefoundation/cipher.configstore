@@ -5,7 +5,9 @@ CHANGES
 1.2.2 (unrelease)
 -----------------
 
-- No changes yet.
+- Provide ``container`` and ``root`` attributes on IConfigurationStore
+  they come handy in various load and dump situation instead of __parent__
+  and getSite
 
 1.2.1 (2012-06-05)
 ------------------

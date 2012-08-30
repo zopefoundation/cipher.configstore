@@ -52,6 +52,8 @@ class ConfigurationStore(object):
     schema = None
     fields = None
     section = None
+    container = None
+    root = None
 
     def __init__(self, context, schema=None, section=None):
         if self.schema is None:
@@ -144,6 +146,7 @@ class ConfigurationStore(object):
             (self.context,), interfaces.IConfigurationStore)
         for store in stores:
             if not isinstance(store, self.__class__):
+                store.root = self.root
                 store.load(config)
         zope.event.notify(
             interfaces.ObjectConfigurationLoadedEvent(
@@ -215,6 +218,7 @@ class ConfigurationStore(object):
             (self.context,), interfaces.IConfigurationStore)
         for store in stores:
             __traceback_info__ = repr(store)
+            store.root = self.root
             store.dump(config)
         return config
 
@@ -262,6 +266,8 @@ class CollectionConfigurationStore(ConfigurationStore):
             item = itemFactory()
             item_store = interfaces.IConfigurationStore(item)
             item_store.section = section
+            item_store.container = self.context
+            item_store.root = self.root
             item_store.load(config)
             # Note sends a ContainerModifiedEvent which would causes a config
             # dump, overwriting the original file with partial information.
@@ -287,6 +293,7 @@ class CollectionConfigurationStore(ConfigurationStore):
                 continue
             item_store = interfaces.IConfigurationStore(item)
             item_store.section = self.section_prefix + name.encode('UTF-8')
+            item_store.root = self.root
             __traceback_info__ = item_store.section
             item_store.dump(config)
         return config
@@ -320,6 +327,7 @@ class ExternalConfigurationStore(ConfigurationStore):
             (self.context,), interfaces.IConfigurationStore)
         for store in stores:
             if not isinstance(store, self.__class__):
+                store.root = self.root
                 store.load(config)
         zope.event.notify(
             interfaces.ObjectConfigurationLoadedEvent(
@@ -355,6 +363,7 @@ class ExternalConfigurationStore(ConfigurationStore):
             (self.context,), interfaces.IConfigurationStore)
         for store in stores:
             __traceback_info__ = (fn, store)
+            store.root = self.root
             store.dump(config)
         # Write the configuration out.
         with open(fn, 'w') as file:
