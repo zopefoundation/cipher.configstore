@@ -1,0 +1,5 @@
+TODO
+-----
+
+Implement a load/dump type registry instead of the
+hardcoded load_/dump_ methods
