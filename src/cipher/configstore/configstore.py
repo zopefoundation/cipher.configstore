@@ -45,6 +45,42 @@ def parse_time(s):
     return dateutil.parser.parse(s).time()
 
 
+class StoreSorter(object):
+
+    NEW = 'new'
+    OPEN = 'open'
+    CLOSED = 'closed'
+
+    def __init__(self, stores):
+        self.stores = dict([(s.name, s) for s in stores])
+
+    def addStore(self, name, store):
+        if name in self.callstack:
+            raise interfaces.CyclicDependencyError(name)
+        self.callstack.append(name)
+        if name not in self.status:
+            self.status[name] = self.NEW
+        if self.status[name] == self.NEW:
+            self.status[name] = self.OPEN
+            for depName in store.dependencies:
+                if (depName not in self.status or
+                    self.status[depName] is not self.CLOSED):
+                    self.addStore(depName, self.stores[depName])
+            self.ordered.append(store)
+            self.status[name] = self.CLOSED
+        self.callstack.pop(-1)
+
+    def __call__(self):
+        self.status = {}
+        self.callstack = []
+        self.ordered = []
+
+        for name, store in self.stores.items():
+            self.addStore(name, store)
+
+        return self.ordered
+
+
 class ConfigurationStore(object):
     zope.interface.implements(interfaces.IConfigurationStore)
     listValueSeparator = ', '
@@ -54,6 +90,12 @@ class ConfigurationStore(object):
     section = None
     container = None
     root = None
+
+    dependencies = ()
+
+    @property
+    def name(self):
+        return '%s.%s' % (self.__class__.__module__, self.__class__.__name__)
 
     def __init__(self, context, schema=None, section=None):
         if self.schema is None:
@@ -144,6 +186,7 @@ class ConfigurationStore(object):
         changed_fields = self._load(config)
         stores = zope.component.subscribers(
             (self.context,), interfaces.IConfigurationStore)
+        stores = StoreSorter(stores)()
         for store in stores:
             if not isinstance(store, self.__class__):
                 store.root = self.root

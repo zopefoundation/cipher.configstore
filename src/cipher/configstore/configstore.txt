@@ -15,7 +15,7 @@ configuration file. Let's create a simple component:
 
   >>> class Person(object):
   ...     zope.interface.implements(IPerson)
-  ...     def __init__(self, fn, ln):
+  ...     def __init__(self, fn=u'', ln=u''):
   ...         self.firstName = fn
   ...         self.lastName = ln
   ...         self.nickname = None
@@ -274,3 +274,188 @@ Cleanup:
   >>> import os
   >>> os.unlink(conf_fn)
 
+External Stores
+---------------
+
+External Configuration Stores allow configuration to be written to another
+file only leaving a reference in the current one. This allows complex
+configuration to be split up into multiple files.
+
+  >>> import tempfile, os
+  >>> conf_dir = tempfile.mkdtemp()
+  >>> os.mkdir(os.path.join(conf_dir, 'test'))
+
+  >>> class ExternalPersonStore(configstore.ExternalConfigurationStore):
+  ...     schema = IPerson
+  ...
+  ...     def get_config_dir(self):
+  ...         return conf_dir
+  ...
+  ...     def get_site(self):
+  ...         return type('FakeSite', (), {'__name__': 'test'})()
+  ...
+  ...     def get_filename(self):
+  ...         return 'person.ini'
+
+  >>> store = ExternalPersonStore(stephan)
+
+We can now dump the configuration to a file:
+
+  >>> config = store.dump()
+  >>> config
+  <ConfigParser.RawConfigParser instance at ...>
+
+  >>> conf_fn = os.path.join(conf_dir, 'test', 'main.ini')
+  >>> config.write(open(conf_fn, 'w'))
+  >>> print open(conf_fn, 'r').read()
+  [IPerson]
+  config-path = test/person.ini
+
+  >>> ext_conf_fn = os.path.join(conf_dir, 'test', 'person.ini')
+  >>> print open(ext_conf_fn, 'r').read()
+  [general]
+  firstName = Stephan
+  lastName = Richter
+  nickname =
+  <BLANKLINE>
+  [address]
+  zip = 01754
+  <BLANKLINE>
+  [number:home]
+  name = home
+  number = 555-111-2222
+  <BLANKLINE>
+  [number:work]
+  name = work
+  number = 555-333-4444
+
+Let's now load the configuration again:
+
+  >>> stephan2 = Person()
+  >>> store = ExternalPersonStore(stephan2)
+  >>> store.load(config)
+
+  >>> stephan2.firstName
+  u'Stephan'
+  >>> stephan2.lastName
+  u'Richter'
+  >>> stephan2.nickname
+  u''
+
+Field Support
+-------------
+
+The configuration store supports several field types by default.
+
+  >>> store = configstore.ConfigurationStore(Person(), schema=IPerson)
+
+Time
+~~~~
+
+  >>> import datetime
+  >>> field = None
+
+  >>> store.dump_type_Time(datetime.time(3, 47), field)
+  '03:47'
+  >>> store.load_type_Time('03:47', field)
+  datetime.time(3, 47)
+
+  >>> store.dump_type_Time(datetime.time(15, 47), field)
+  '15:47'
+  >>> store.load_type_Time('15:47', field)
+  datetime.time(15, 47)
+
+Timedelta
+~~~~~~~~~
+
+  >>> field = None
+
+  >>> store.dump_type_Timedelta(datetime.timedelta(seconds=3661), field)
+  '1:01:01'
+  >>> store.load_type_Timedelta('1:01:01', field)
+  datetime.timedelta(0, 3661)
+
+  >>> store.load_type_Timedelta('', field) is None
+  True
+
+Text
+~~~~
+
+  >>> field = None
+
+  >>> store.dump_type_Text('foo\n\nbar', field)
+  'foo\n<BLANKLINE>\nbar'
+
+  >>> store.load_type_Text('foo\n<BLANKLINE>\nbar', field)
+  'foo\n\nbar'
+
+  >>> store.dump_type_Text(None, field)
+  ''
+
+Choice
+~~~~~~
+
+  >>> import zope.schema
+  >>> field = zope.schema.Choice(
+  ...     vocabulary=zope.schema.vocabulary.SimpleVocabulary([
+  ...                    zope.schema.vocabulary.SimpleTerm(1, 'one'),
+  ...                    zope.schema.vocabulary.SimpleTerm(2, 'two')
+  ...                    ]))
+
+  >>> store.dump_type_Choice(1, field)
+  'one'
+  >>> store.load_type_Choice('one', field)
+  1
+
+  >>> store.dump_type_Choice(None, field)
+  ''
+  >>> store.load_type_Choice('', field) is None
+  True
+
+List
+~~~~
+
+  >>> field = None
+
+  >>> store.dump_type_List(['one', 'two', 'three'], field)
+  'one, two, three'
+
+  >>> store.load_type_List('one, two, three', field)
+  ['one', 'two', 'three']
+
+  >>> store.dump_type_List(None, field)
+  ''
+  >>> store.load_type_List('', field)
+  []
+
+Tuple
+~~~~~
+
+  >>> field = None
+
+  >>> store.dump_type_Tuple(('one', 'two', 'three'), field)
+  'one, two, three'
+
+  >>> store.load_type_Tuple('one, two, three', field)
+  ('one', 'two', 'three')
+
+  >>> store.dump_type_Tuple(None, field)
+  ''
+  >>> store.load_type_Tuple('', field)
+  ()
+
+Set
+~~~
+
+  >>> field = None
+
+  >>> store.dump_type_Set(set(['one', 'two', 'three']), field)
+  'three, two, one'
+
+  >>> store.load_type_Set('one, two, three', field)
+  set(['three', 'two', 'one'])
+
+  >>> store.dump_type_Set(None, field)
+  ''
+  >>> store.load_type_Set('', field)
+  set([])
