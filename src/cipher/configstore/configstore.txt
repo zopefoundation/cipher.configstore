@@ -412,6 +412,9 @@ Choice
   >>> store.load_type_Choice('', field) is None
   True
 
+  >>> store.dump_type_Choice(3, field)
+  ''
+
 List
 ~~~~
 

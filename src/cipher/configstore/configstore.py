@@ -213,7 +213,10 @@ class ConfigurationStore(object):
         if value is None or value == '':
             return ''
         bound_field = field.bind(self.context)
-        return bound_field.vocabulary.getTerm(value).token
+        try:
+            return bound_field.vocabulary.getTerm(value).token
+        except LookupError:
+            return ''
 
     def dump_type_Tuple(self, value, field):
         return self.listValueSeparator.join(value) if value else ''
