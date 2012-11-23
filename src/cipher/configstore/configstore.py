@@ -33,6 +33,8 @@ from cipher.configstore import interfaces
 log = logging.getLogger(__name__)
 
 novalue = object()
+NONE_VALUE_MARKER = u'<<<###NONE###>>>'  # make this pretty unique
+BLANKLINE_MARKER = '\n<BLANKLINE>\n'
 
 
 def stringify(s):
@@ -117,7 +119,7 @@ class ConfigurationStore(object):
         return datetime.timedelta(seconds=h * 3600 + m * 60 + s)
 
     def load_type_Text(self, value, field):
-        return value.replace('\n<BLANKLINE>\n', '\n\n')
+        return value.replace(BLANKLINE_MARKER, '\n\n')
 
     def load_type_Choice(self, unicode, field):
         if not unicode.strip():
@@ -154,8 +156,11 @@ class ConfigurationStore(object):
             # If we do not have a converter then it is probably meant to be.
             return False
         try:
-            value = converter(
-                unicode(config.get(self.section, name), 'UTF-8'))
+            value = unicode(config.get(self.section, name), 'UTF-8')
+            if value == NONE_VALUE_MARKER:
+                value = None
+            else:
+                value = converter(value)
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError,
                 zope.schema.ValidationError, ValueError):
             # Ignore fields that fail validation, since the field might
@@ -198,19 +203,19 @@ class ConfigurationStore(object):
             ))
 
     def dump_type_Time(self, value, field):
-        return value.strftime('%H:%M') if value is not None else ''
+        return value.strftime('%H:%M')
 
     def dump_type_Timedelta(self, value, field):
-        return str(value) if value is not None else ''
+        return str(value)
 
     def dump_type_Text(self, value, field):
         if not value:
             return ''
         value = value.replace('\r\n', '\n')
-        return value.replace('\n\n', '\n<BLANKLINE>\n')
+        return value.replace('\n\n', BLANKLINE_MARKER)
 
     def dump_type_Choice(self, value, field):
-        if value is None or value == '':
+        if value == '':
             return ''
         bound_field = field.bind(self.context)
         try:
@@ -219,7 +224,7 @@ class ConfigurationStore(object):
             return ''
 
     def dump_type_Tuple(self, value, field):
-        return self.listValueSeparator.join(value) if value else ''
+        return self.listValueSeparator.join(value)
 
     dump_type_List = dump_type_Tuple
     dump_type_Set = dump_type_Tuple
@@ -242,7 +247,10 @@ class ConfigurationStore(object):
             return
         if value is novalue:
             value = getattr(self.context, name)
-        unicode_value = converter(value)
+        if value is None:
+            unicode_value = NONE_VALUE_MARKER
+        else:
+            unicode_value = converter(value)
         assert unicode_value is not None, "%r wasn't supposed to return None!" % converter
         config.set(self.section, name, unicode_value.encode('UTF-8'))
 

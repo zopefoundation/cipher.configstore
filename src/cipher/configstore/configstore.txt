@@ -42,7 +42,7 @@ We can now dump the configuration to a file:
   [generic]
   firstName = Stephan
   lastName = Richter
-  nickname =
+  nickname = <<<###NONE###>>>
 
 We can now load the config again, overwriting any existing data.
 
@@ -58,8 +58,8 @@ We can now load the config again, overwriting any existing data.
   u'Stephan'
   >>> stephan2.lastName
   u'Richter'
-  >>> stephan2.nickname
-  u''
+  >>> print stephan2.nickname
+  None
 
 Note that after the loading process an ``ObjectModifiedEvent`` event is
 created. Let's write a simple subscriber to the event and see what we get:
@@ -119,7 +119,7 @@ Let's now regenerate the configuration for the person:
   [generic]
   firstName = Stephan
   lastName = Richter
-  nickname =
+  nickname = <<<###NONE###>>>
   <BLANKLINE>
   [address]
   zip = 01754
@@ -159,7 +159,7 @@ Let's now serialize the configuration again:
   [IPerson]
   firstName = Stephan
   lastName = RICHTER
-  nickname =
+  nickname = <<<###NONE###>>>
   <BLANKLINE>
   [address]
   zip = 01754
@@ -240,7 +240,7 @@ Let's now dump the configuration:
   [IPerson]
   firstName = Stephan
   lastName = RICHTER
-  nickname =
+  nickname = <<<###NONE###>>>
   <BLANKLINE>
   [address]
   zip = 01754
@@ -316,7 +316,7 @@ We can now dump the configuration to a file:
   [general]
   firstName = Stephan
   lastName = Richter
-  nickname =
+  nickname = <<<###NONE###>>>
   <BLANKLINE>
   [address]
   zip = 01754
@@ -339,8 +339,8 @@ Let's now load the configuration again:
   u'Stephan'
   >>> stephan2.lastName
   u'Richter'
-  >>> stephan2.nickname
-  u''
+  >>> print stephan2.nickname
+  None
 
 Field Support
 -------------
@@ -426,8 +426,6 @@ List
   >>> store.load_type_List('one, two, three', field)
   ['one', 'two', 'three']
 
-  >>> store.dump_type_List(None, field)
-  ''
   >>> store.load_type_List('', field)
   []
 
@@ -442,8 +440,6 @@ Tuple
   >>> store.load_type_Tuple('one, two, three', field)
   ('one', 'two', 'three')
 
-  >>> store.dump_type_Tuple(None, field)
-  ''
   >>> store.load_type_Tuple('', field)
   ()
 
@@ -458,7 +454,5 @@ Set
   >>> store.load_type_Set('one, two, three', field)
   set(['three', 'two', 'one'])
 
-  >>> store.dump_type_Set(None, field)
-  ''
   >>> store.load_type_Set('', field)
   set([])
