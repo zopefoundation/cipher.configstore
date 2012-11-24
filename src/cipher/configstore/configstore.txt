@@ -426,6 +426,12 @@ List
   >>> store.load_type_List('one, two, three', field)
   ['one', 'two', 'three']
 
+  >>> store.dump_type_List(['one', None, 'three'], field)
+  u'one, <<<###NONE###>>>, three'
+
+  >>> store.load_type_List('one, <<<###NONE###>>>, three', field)
+  ['one', None, 'three']
+
   >>> store.load_type_List('', field)
   []
 
@@ -440,6 +446,12 @@ Tuple
   >>> store.load_type_Tuple('one, two, three', field)
   ('one', 'two', 'three')
 
+  >>> store.dump_type_Tuple(('one', None, 'three'), field)
+  u'one, <<<###NONE###>>>, three'
+
+  >>> store.load_type_Tuple('one, <<<###NONE###>>>, three', field)
+  ('one', None, 'three')
+
   >>> store.load_type_Tuple('', field)
   ()
 
@@ -453,6 +465,12 @@ Set
 
   >>> store.load_type_Set('one, two, three', field)
   set(['three', 'two', 'one'])
+
+  >>> store.dump_type_Set(set(['one', None, 'three']), field)
+  u'<<<###NONE###>>>, three, one'
+
+  >>> store.load_type_Set('one, <<<###NONE###>>>, three', field)
+  set([None, 'three', 'one'])
 
   >>> store.load_type_Set('', field)
   set([])

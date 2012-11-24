@@ -130,7 +130,14 @@ class ConfigurationStore(object):
     def load_type_List(self, unicode, field):
         if not unicode.strip():
             return []
-        return [item.strip() for item in unicode.split(self.listValueSeparator)]
+        items = []
+        for item in unicode.split(self.listValueSeparator):
+            stripped = item.strip()
+            if stripped == NONE_VALUE_MARKER:
+                items.append(None)
+            else:
+                items.append(stripped)
+        return items
 
     def load_type_Tuple(self, unicode, field):
         return tuple(self.load_type_List(unicode, field))
@@ -224,7 +231,9 @@ class ConfigurationStore(object):
             return ''
 
     def dump_type_Tuple(self, value, field):
-        return self.listValueSeparator.join(value)
+        items = [NONE_VALUE_MARKER if i is None else i
+                 for i in value]
+        return self.listValueSeparator.join(items)
 
     dump_type_List = dump_type_Tuple
     dump_type_Set = dump_type_Tuple
