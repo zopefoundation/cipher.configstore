@@ -93,5 +93,6 @@ class IObjectConfigurationLoadedEvent(IObjectModifiedEvent):
     """We've just loaded an object's configuration from disk."""
 
 
+@zope.interface.implementer(IObjectConfigurationLoadedEvent)
 class ObjectConfigurationLoadedEvent(ObjectModifiedEvent):
-    zope.interface.implements(IObjectConfigurationLoadedEvent)
+    pass

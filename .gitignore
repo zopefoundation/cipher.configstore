@@ -1,0 +1,17 @@
+*.pyc
+*.egg-info
+.installed.cfg
+bin/
+parts/
+develop-eggs/
+dist/
+ID
+TAGS
+tags
+
+.tox
+.coverage
+coverage
+coverage.xml
+htmlcov/
+

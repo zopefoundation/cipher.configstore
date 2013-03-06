@@ -14,16 +14,17 @@
 """Setup for package cipher.configstore
 """
 import os
+import sys
 from setuptools import setup, find_packages
 
+PY2 = sys.version_info[0] == 2
 
 def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
-
 setup(
     name='cipher.configstore',
-    version='1.3.3.dev0',
+    version='2.0.0a1.dev0',
     url="http://pypi.python.org/pypi/cipher.configstore/",
     author='Zope Foundation and Contributors',
     author_email='zope-dev@zope.org',
@@ -39,21 +40,26 @@ setup(
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: Implementation :: CPython',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Topic :: Internet :: WWW/HTTP',
         'Framework :: Zope3'],
     packages=find_packages('src'),
     package_dir={'': 'src'},
     extras_require=dict(
-        test=['zope.testing',
-                'z3c.coverage',
-                'coverage',
-                'python-subunit',
-                'junitxml'],
+        test=[
+            'zope.testing',
+            'z3c.coverage',
+            'coverage',
+            'python-subunit',
+            'junitxml'],
     ),
     install_requires=[
-        'odict',
         'python-dateutil',
         'setuptools',
         'zope.component',
@@ -62,7 +68,9 @@ setup(
         'zope.lifecycleevent',
         'zope.schema',
         'zope.security',
-    ],
+    ] + (['odict'] if PY2 else []),
+    tests_require=['zope.testing'],
+    test_suite='cipher.configstore.tests.test_suite',
     include_package_data=True,
     zip_safe=False
     )

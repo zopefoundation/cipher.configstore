@@ -18,9 +18,8 @@ from __future__ import absolute_import
 import datetime
 import dateutil.parser
 import logging
-import odict
 import os
-import ConfigParser
+import sys
 import zope.component
 import zope.event
 import zope.interface
@@ -36,11 +35,25 @@ novalue = object()
 NONE_VALUE_MARKER = u'<<<###NONE###>>>'  # make this pretty unique
 BLANKLINE_MARKER = '\n<BLANKLINE>\n'
 
+PY3 = sys.version_info[0] >= 3
+
+try:
+    from collections import OrderedDict
+except ImportError:
+    # Py2 BBB
+    from odict import odict as OrderedDict
+
+try:
+    import configparser
+except ImportError:
+    # Py2 BBB
+    import ConfigParser as configparser
+
 
 def stringify(s):
     if s is None:
-        return ''
-    return unicode(s)
+        return u''
+    return s.decode() if isinstance(s, bytes) else s
 
 
 def parse_time(s):
@@ -83,8 +96,8 @@ class StoreSorter(object):
         return self.ordered
 
 
+@zope.interface.implementer(interfaces.IConfigurationStore)
 class ConfigurationStore(object):
-    zope.interface.implements(interfaces.IConfigurationStore)
     listValueSeparator = ', '
 
     schema = None
@@ -163,12 +176,15 @@ class ConfigurationStore(object):
             # If we do not have a converter then it is probably meant to be.
             return False
         try:
-            value = unicode(config.get(self.section, name), 'UTF-8')
+            if PY3:
+                value = config.get(self.section, name)
+            else:
+                value = unicode(config.get(self.section, name), 'UTF-8')
             if value == NONE_VALUE_MARKER:
                 value = None
             else:
                 value = converter(value)
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError,
+        except (configparser.NoSectionError, configparser.NoOptionError,
                 zope.schema.ValidationError, ValueError):
             # Ignore fields that fail validation, since the field might
             # simply not be set and no value is an invalid value.
@@ -176,7 +192,7 @@ class ConfigurationStore(object):
         if value != getattr(context, name):
             try:
                 setattr(context, name, value)
-            except zope.schema.ValidationError, e:
+            except zope.schema.ValidationError as e:
                 log.warn("Field %r %s failed validation: %s", context, name, e)
                 # Ignore fields that fail validation, since the field might
                 # simply not be set and no value is an invalid value.
@@ -261,7 +277,10 @@ class ConfigurationStore(object):
         else:
             unicode_value = converter(value)
         assert unicode_value is not None, "%r wasn't supposed to return None!" % converter
-        config.set(self.section, name, unicode_value.encode('UTF-8'))
+        if PY3:
+            config.set(self.section, name, unicode_value)
+        else:
+            config.set(self.section, name, unicode_value.encode('UTF-8'))
 
     def _dump(self, config):
         """Hook for custom config stores."""
@@ -272,7 +291,7 @@ class ConfigurationStore(object):
 
     def dump(self, config=None):
         if config is None:
-            config = ConfigParser.RawConfigParser(dict_type=odict.odict)
+            config = configparser.RawConfigParser(dict_type=OrderedDict)
             config.optionxform = str  # don't lowercase
         # Write object's configuration.
         self._dump(config)
@@ -323,7 +342,8 @@ class CollectionConfigurationStore(ConfigurationStore):
         for section in config.sections():
             if not section.startswith(self.section_prefix):
                 continue
-            name = section[len(self.section_prefix):].decode('UTF-8')
+            name = section[len(self.section_prefix):]
+            name = name.decode('UTF-8') if isinstance(name, bytes) else name
             itemFactory = self._getItemFactory(config, section)
             __traceback_info__ = (section, itemFactory)
             item = itemFactory()
@@ -342,7 +362,7 @@ class CollectionConfigurationStore(ConfigurationStore):
 
     def dump(self, config=None):
         if config is None:
-            config = ConfigParser.RawConfigParser(dict_type=odict.odict)
+            config = configparser.RawConfigParser(dict_type=OrderedDict)
             config.optionxform = str  # don't lowercase
         for name, item in self._getItems():
             if getattr(item, '__parent__', self) is None:
@@ -355,7 +375,8 @@ class CollectionConfigurationStore(ConfigurationStore):
                 # See https://bugs.launchpad.net/bugs/705600
                 continue
             item_store = interfaces.IConfigurationStore(item)
-            item_store.section = self.section_prefix + name.encode('UTF-8')
+            name = name if PY3 else name.encode('UTF-8')
+            item_store.section = self.section_prefix + name
             item_store.root = self.root
             __traceback_info__ = item_store.section
             item_store.dump(config)
@@ -402,7 +423,7 @@ class ExternalConfigurationStore(ConfigurationStore):
         fn = os.path.join(
             self.get_config_dir(), config.get(self.section, 'config-path'))
         __traceback_info__ = fn
-        ext_config = ConfigParser.RawConfigParser(dict_type=odict.odict)
+        ext_config = configparser.RawConfigParser(dict_type=OrderedDict)
         ext_config.optionxform = str  # don't lowercase
         ext_config.read(fn)
         self._load_from_external(ext_config)
@@ -413,7 +434,7 @@ class ExternalConfigurationStore(ConfigurationStore):
         fn = os.path.join(
             self.get_config_dir(), cs.__name__, self.get_filename())
         # Create a new configuration for the table-specific API.
-        config = ConfigParser.RawConfigParser(dict_type=odict.odict)
+        config = configparser.RawConfigParser(dict_type=OrderedDict)
         config.optionxform = str  # don't lowercase
         # Write object's configuration.
         orig_section = self.section
@@ -435,7 +456,7 @@ class ExternalConfigurationStore(ConfigurationStore):
 
     def dump(self, config=None):
         if config is None:
-            config = ConfigParser.RawConfigParser(dict_type=odict.odict)
+            config = configparser.RawConfigParser(dict_type=OrderedDict)
             config.optionxform = str  # don't lowercase
         # Write any sub-object configuration into a separate configuration file.
         fn = self._dump_to_external()
