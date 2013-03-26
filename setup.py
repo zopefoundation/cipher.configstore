@@ -24,7 +24,7 @@ def read(*rnames):
 
 setup(
     name='cipher.configstore',
-    version='2.0.0a2.dev0',
+    version='2.0.0a2',
     url="http://pypi.python.org/pypi/cipher.configstore/",
     author='Zope Foundation and Contributors',
     author_email='zope-dev@zope.org',
