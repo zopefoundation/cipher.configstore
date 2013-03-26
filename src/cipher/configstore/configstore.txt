@@ -379,6 +379,13 @@ Timedelta
   >>> store.load_type_Timedelta('', field) is None
   True
 
+Bool
+~~~~
+
+  >>> field = None
+  >>> store.dump_type_Bool(True, field)
+  'True'
+
 Text
 ~~~~
 

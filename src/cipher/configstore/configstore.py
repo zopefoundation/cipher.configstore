@@ -231,6 +231,9 @@ class ConfigurationStore(object):
     def dump_type_Timedelta(self, value, field):
         return str(value)
 
+    def dump_type_Bool(self, value, field):
+        return str(value)
+
     def dump_type_Text(self, value, field):
         if not value:
             return ''
