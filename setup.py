@@ -48,7 +48,7 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Framework :: Zope3'],
+        'Framework :: Zope :: 3'],
     packages=find_packages('src'),
     package_dir={'': 'src'},
     extras_require=dict(
